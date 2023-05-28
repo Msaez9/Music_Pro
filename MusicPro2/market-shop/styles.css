@@ -142,9 +142,9 @@ body {
 .modal-container > .modal-content {
   display: flex;
   flex-direction: row;
-  justify-content: space-around;
+  justify-content: space-between;
   align-items: center;
-  width: 70%;
+  width: 80%;
   margin: 10px;
 }
 
@@ -205,4 +205,26 @@ body {
 
 .restar {
   cursor: pointer;
+}
+
+.pagar_clp {
+  cursor: pointer;
+  border: none;
+  padding: 12px;
+  color: white;
+  background-color: #049e2d;
+  text-align: center;
+  cursor: pointer;
+  font-size: 18px;
+}
+
+.pagar_usd {
+  cursor: pointer;
+  border: none;
+  padding: 12px;
+  color: white;
+  background-color: #1b02f5;
+  text-align: center;
+  cursor: pointer;
+  font-size: 18px;
 }

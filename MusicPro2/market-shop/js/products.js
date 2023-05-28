@@ -1,5 +1,86 @@
+async function postWebpay(url, valor, session_id) {
+  
+  try {
+      const response = await fetch(url+"/webpay", {
+      method: "POST",
+      headers: {
+          "Content-Type": "application/json"
+      },
+      body: JSON.stringify(
+        { valor: valor,
+          buy_order: Math.floor(Math.random() * 1000000000).toString(),
+          session_id: session_id,
+          return_url: this.location.href
+       })
+      });
+
+      const data = await response.json();
+      /*<form method="post" action="Inserta aquí la url entregada">
+      <input type="hidden" name="token_ws" value="Inserte aquí el token entregado" />
+      <input type="submit" value="Ir a pagar" />
+      </form>*/
+      let form = document.createElement("form");
+      form.setAttribute("method", "post");
+      form.setAttribute("action", data.url);
+      let input = document.createElement("input");
+      input.setAttribute("type", "hidden");
+      input.setAttribute("name", "token_ws");
+      input.setAttribute("value", data.token);
+      form.appendChild(input);
+      document.body.appendChild(form);
+      form.submit();
+      
+  } catch (error) {
+      console.error(error);
+  }
+}
+
+async function getWebpay(url) {
+  try {
+      const response = await fetch(url+"webpay/commit", {
+          method: "POST",
+          headers: {
+              "Content-Type": "application/json"
+          },
+          body: JSON.stringify({ token_ws: token_ws })
+      });
+      const data = await response.json();
+      console.log(data);
+      return data;
+  } catch (error) {
+      console.error(error);
+  }
+}
+
+async function getResponse() {
+  result = await getWebpay(api_url);
+  Promise.resolve(result);
+
+  if (result.response_code == '0' && result.status == 'AUTHORIZED') {
+      alert("Transacción exitosa");
+      localStorage.clear();
+      window.location.href = "index.html"
+                    
+  } else {
+      alert("Transacción rechazada");
+  }
+}
+
+async function getDolar(url){
+  try {
+      const response = await fetch(url+"/banco-central")
+      const data = await response.json();
+      dolar = data.dolar;
+      return dolar;
+  }
+  catch (error) {
+      console.error(error);
+  }
+}
+
 function cargarProductos(api_url) {
   let productos = [];
+  let session_id = Math.random().toString(36).substring(2);
   fetch(api_url+"/productos")
     .then((response) => response.json())
     .then((data) => {
@@ -26,7 +107,7 @@ function cargarProductos(api_url) {
         content.innerHTML = `
           <img src="${product.imagen}">
           <h3>${product.nombre}</h3>
-          <p class="price">$${product.precio}</p>
+          <p class="price">CLP $${product.precio}</p>
           <p class="price">USD $${product.precio_dolar}</p>
         `;
       
@@ -84,16 +165,16 @@ function cargarProductos(api_url) {
         carrito.forEach((product) => {
           let carritoContent = document.createElement("div");
           carritoContent.className = "modal-content";
-          console.log(product);
+          
           carritoContent.innerHTML = `
               <img src="${product.img}">
-              <h3>${product.nombre}</h3>
-              <p>${product.precio} $</p>
+              <h4>${product.nombre}</h4>
               <span class="restar"> - </span>
               <!--recomiendo no escribir la palabra cantidad para que no quede tan largo :)-->
               <p>${product.cantidad}</p>
               <span class="sumar"> + </span>
-              <p>Total: ${product.cantidad * product.precio} $</p>
+              <p>Total: CLP $${product.cantidad * product.precio}</p>
+              <p>Total: USD $${product.cantidad * product.precio_dolar}</p>
               <span class="delete-product"> ❌ </span>
             `;
       
@@ -131,13 +212,32 @@ function cargarProductos(api_url) {
         });
       
         const total = carrito.reduce((acc, el) => acc + el.precio * el.cantidad, 0);
+        const total_dolar = carrito.reduce((acc, el) => acc + el.precio_dolar * el.cantidad, 0);
       
         const totalBuying = document.createElement("div");
         totalBuying.className = "total-content";
-        totalBuying.innerHTML = `Total a pagar: ${total} $`;
+        totalBuying.innerHTML = `<h3>Total a pagar: CLP $${total} / USD $${total_dolar}</h3>
+            <button id="comprar_clp" class="pagar_clp">Pagar CLP</button>
+            <button id="comprar_usd" class="pagar_usd">Pagar USD</button>`;
         modalContainer.append(totalBuying);
+        let comprar_clp = document.getElementById("comprar_clp");
+        let comprar_usd = document.getElementById("comprar_usd");
+  
+        comprar_clp.addEventListener("click", () => {
+          postWebpay(api_url, total, session_id);
+          modalContainer.style.display = "none";
+        });
+
+        comprar_usd.addEventListener("click", () => {
+          getDolar(api_url).then((data) => {
+            let total = total_dolar * data;;
+            postWebpay(api_url, total, session_id);
+          });          
+          modalContainer.style.display = "none";
+        });
       };
       
+
       verCarrito.addEventListener("click", pintarCarrito);
       
       const eliminarProducto = (id) => {
@@ -168,7 +268,11 @@ function cargarProductos(api_url) {
 
 
       
+    })
+    .catch((error) => {
+      console.log(error);
     });
+    
 }
 
 /*const productos = [
