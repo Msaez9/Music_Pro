@@ -55,9 +55,19 @@ async function getWebpay(url) {
 async function getResponse() {
   result = await getWebpay(api_url);
   Promise.resolve(result);
+  console.log(result);
 
   if (result.response_code == '0' && result.status == 'AUTHORIZED') {
       alert("Transacción exitosa");
+      let carrito = JSON.parse(localStorage.getItem("carrito"));
+      
+      id_venta = await agregarVenta(api_url, result.amount, 1, 0).then((data) => {
+        carrito.forEach((product) => {
+
+          agregarDetalle(api_url, id_venta, product.id, product.cantidad, product.precio, 0);
+        });
+      });
+      Promise.resolve(id_venta);
       localStorage.clear();
       window.location.href = "index.html"
                     
@@ -75,6 +85,55 @@ async function getDolar(url){
   }
   catch (error) {
       console.error(error);
+  }
+}
+async function agregarDetalle(url, id_venta, cod_producto, cantidad, valor, descuento){
+  try {
+    const response = await fetch(url+"/agregar-detalle-venta", {
+      method: "POST",
+      headers: {
+          "Content-Type": "application/json"
+          },
+      body: JSON.stringify({
+        'cantidad': cantidad,
+        'valor': valor,
+        'id_venta': id_venta,
+        'cod_producto': cod_producto,
+        'descuento': descuento
+      })
+    })
+    .then((response) => response.json())
+    .then((data) => {
+      return data;
+        })
+  }
+  catch (error) {
+    console.error(error);
+  }
+}
+
+async function agregarVenta(url, total, id_tipo_pago, id_usuario){
+  try {
+    const response = await fetch(url+"/agregar-venta", {
+      method: "POST",
+      headers: {
+          "Content-Type": "application/json"
+          },
+        body: JSON.stringify({
+          'total': total,
+          'id_tipo_pago': id_tipo_pago,
+          'id_usuario': id_usuario
+        })
+      })
+      .then((response) => response.json())
+      .then((data) => {
+        id_venta = data.id_venta;
+        
+        return id_venta;
+      })
+  }
+  catch (error) {
+    console.error(error);
   }
 }
 
@@ -109,6 +168,7 @@ function cargarProductos(api_url) {
           <h3>${product.nombre}</h3>
           <p class="price">CLP $${product.precio}</p>
           <p class="price">USD $${product.precio_dolar}</p>
+          <p hidden>${product.cod_producto}</p>
         `;
       
         shopContent.append(content);
@@ -120,17 +180,17 @@ function cargarProductos(api_url) {
         content.append(comprar);
       
         comprar.addEventListener("click", () => {
-          const repeat = carrito.some((repeatProduct) => repeatProduct.id === product.id);
+          const repeat = carrito.some((repeatProduct) => repeatProduct.id === product.cod_producto);
       
           if (repeat) {
             carrito.map((prod) => {
-              if (prod.id === product.id) {
+              if (prod.id === product.cod_producto) {
                 prod.cantidad++;
               }
             });
           } else {
             carrito.push({
-              id: product.id,
+              id: product.cod_producto,
               img: product.imagen,
               nombre: product.nombre,
               precio: product.precio,
@@ -224,7 +284,7 @@ function cargarProductos(api_url) {
         let comprar_usd = document.getElementById("comprar_usd");
   
         comprar_clp.addEventListener("click", () => {
-          postWebpay(api_url, total, session_id);
+          postWebpay(api_url, total, session_id);          
           modalContainer.style.display = "none";
         });
 
