@@ -1,4 +1,177 @@
-const productos = [
+function cargarProductos(api_url) {
+  let productos = [];
+  fetch(api_url+"/productos")
+    .then((response) => response.json())
+    .then((data) => {
+      const shopContent = document.getElementById("shopContent");
+      const verCarrito = document.getElementById("verCarrito");
+      const modalContainer = document.getElementById("modal-container");
+      const showAlert = document.getElementById("showAlert");
+      const cantidadCarrito = document.getElementById("cantidadCarrito");
+
+      let carrito = JSON.parse(localStorage.getItem("carrito")) || [];
+
+      const saveLocal = () => {
+        localStorage.setItem("carrito", JSON.stringify(carrito));
+      };
+
+      productos = data;
+      if (productos.length === 0) {
+        shopContent.innerHTML = `<h1>Problema de Conexión con el Servidor</h1>`;
+      }
+
+      productos.forEach((product) => {
+        let content = document.createElement("div");
+        content.className = "card";
+        content.innerHTML = `
+          <img src="${product.imagen}">
+          <h3>${product.nombre}</h3>
+          <p class="price">$${product.precio}</p>
+          <p class="price">USD $${product.precio_dolar}</p>
+        `;
+      
+        shopContent.append(content);
+      
+        let comprar = document.createElement("button");
+        comprar.innerText = "comprar";
+        comprar.className = "comprar";
+      
+        content.append(comprar);
+      
+        comprar.addEventListener("click", () => {
+          const repeat = carrito.some((repeatProduct) => repeatProduct.id === product.id);
+      
+          if (repeat) {
+            carrito.map((prod) => {
+              if (prod.id === product.id) {
+                prod.cantidad++;
+              }
+            });
+          } else {
+            carrito.push({
+              id: product.id,
+              img: product.imagen,
+              nombre: product.nombre,
+              precio: product.precio,
+              precio_dolar: product.precio_dolar,
+              cantidad: 1,
+            });
+            carritoCounter();
+            saveLocal();
+          }
+        });
+      });
+      const pintarCarrito = () => {
+        modalContainer.innerHTML = "";
+        modalContainer.style.display = "flex";
+        const modalHeader = document.createElement("div");
+        modalHeader.className = "modal-header";
+        modalHeader.innerHTML = `
+            <h1 class="modal-header-title">Carrito</h1>
+          `;
+        modalContainer.append(modalHeader);
+      
+        const modalbutton = document.createElement("h1");
+        modalbutton.innerText = "x";
+        modalbutton.className = "modal-header-button";
+      
+        modalbutton.addEventListener("click", () => {
+          modalContainer.style.display = "none";
+        });
+      
+        modalHeader.append(modalbutton);
+      
+        carrito.forEach((product) => {
+          let carritoContent = document.createElement("div");
+          carritoContent.className = "modal-content";
+          console.log(product);
+          carritoContent.innerHTML = `
+              <img src="${product.img}">
+              <h3>${product.nombre}</h3>
+              <p>${product.precio} $</p>
+              <span class="restar"> - </span>
+              <!--recomiendo no escribir la palabra cantidad para que no quede tan largo :)-->
+              <p>${product.cantidad}</p>
+              <span class="sumar"> + </span>
+              <p>Total: ${product.cantidad * product.precio} $</p>
+              <span class="delete-product"> ❌ </span>
+            `;
+      
+          modalContainer.append(carritoContent);
+      
+          let restar = carritoContent.querySelector(".restar");
+      
+          restar.addEventListener("click", () => {
+            if (product.cantidad !== 1) {
+              product.cantidad--;
+            }
+            saveLocal();
+            pintarCarrito();
+          });
+      
+          let sumar = carritoContent.querySelector(".sumar");
+          sumar.addEventListener("click", () => {
+            product.cantidad++;
+            saveLocal();
+            pintarCarrito();
+          });
+      
+          let eliminar = carritoContent.querySelector(".delete-product");
+      
+          eliminar.addEventListener("click", () => {
+            eliminarProducto(product.id);
+          });
+      
+          // let eliminar = document.createElement("span");
+          // eliminar.innerText = "❌";
+          // eliminar.classList = "delete-product";
+          // carritoContent.append(eliminar);
+      
+          // eliminar.addEventListener("click", eliminarProducto);
+        });
+      
+        const total = carrito.reduce((acc, el) => acc + el.precio * el.cantidad, 0);
+      
+        const totalBuying = document.createElement("div");
+        totalBuying.className = "total-content";
+        totalBuying.innerHTML = `Total a pagar: ${total} $`;
+        modalContainer.append(totalBuying);
+      };
+      
+      verCarrito.addEventListener("click", pintarCarrito);
+      
+      const eliminarProducto = (id) => {
+        const foundId = carrito.find((element) => element.id === id);
+      
+        console.log(foundId);
+      
+        carrito = carrito.filter((carritoId) => {
+          return carritoId !== foundId;
+        });
+      
+        carritoCounter();
+        saveLocal();
+        pintarCarrito();
+      };
+      
+      const carritoCounter = () => {
+        cantidadCarrito.style.display = "block";
+      
+        const carritoLength = carrito.length;
+      
+        localStorage.setItem("carritoLength", JSON.stringify(carritoLength));
+      
+        cantidadCarrito.innerText = JSON.parse(localStorage.getItem("carritoLength"));
+      };
+      
+      carritoCounter();
+
+
+      
+    });
+}
+
+/*const productos = [
   {
     id: 1,
     nombre: "Sire M7-6 Transparent Black (2nd Gen)",
@@ -47,4 +220,4 @@ const productos = [
       "https://images.lider.cl/wmtcl?source=url[file:/productos/1221240a.jpg]&sink",
     cantidad: 1,
   },
-];
+];*/
